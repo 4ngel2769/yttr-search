@@ -1,5 +1,5 @@
 <div align="center">
-  <h1>YouTube Transcript Search Tool (`` `ytt-search` ``)</h1>
+  <h1>YouTube Transcript Search Tool (<code>ytt-search</code>)</h1>
 
   <img src="https://img.shields.io/badge/python-3.13%2B-blue" title="Python Version">
   <img src="https://img.shields.io/badge/license-MIT-green" title="License">
