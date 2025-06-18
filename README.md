@@ -1,7 +1,12 @@
-# YouTube Transcript Search Tool (`ytt-search`)
+<div align="center">
+  <h1>YouTube Transcript Search Tool (`` `ytt-search` ``)</h1>
 
-![Python Version](https://img.shields.io/badge/python-3.7%2B-blue)
-![License](https://img.shields.io/badge/license-MIT-green)
+  <img src="https://img.shields.io/badge/python-3.13%2B-blue" title="Python Version">
+  <img src="https://img.shields.io/badge/license-MIT-green" title="License">
+</div>
+
+> [!NOTE] 
+> Project has been moved to its own repository from [4ngel2769/side-projects](https://github.com/4ngel2769/side-projects)
 
 A CLI utility to search YouTube video transcripts for one or more keywords or phrases.  
 Supports scanning an entire channel (by ID, URL or handle), a single video URL, or a batch of URLs from a file.  
@@ -31,8 +36,8 @@ Highlights matches in context, prints timestamps, and generates "jump-to" links,
 
 1. Clone this repo and `cd` into the script folder:
     ```bash
-    git clone https://github.com/4ngel2769/side-projects.git
-    cd side-projects/scripts/ytt-search
+    git clone https://github.com/4ngel2769/yttr-search.git
+    cd ytt-search
     ```
 2. Install dependencies:
     ```bash
@@ -173,6 +178,9 @@ Keywords not found:
 
 ## Contributing
 
+> [!TIP]
+> Read the [Code of Conduct](CONTRIBUTING.md)
+
 1. Fork the repo
 2. Create a branch:
    `git checkout -b feature/name`
@@ -184,7 +192,7 @@ Keywords not found:
 
 ## License
 
-MIT © 2025 angeldev0. See [LICENSE](../../LICENSE) for details.
+MIT © 2025 angeldev0. See [LICENSE](LICENSE) for details.
 
 ---
 
