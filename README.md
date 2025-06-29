@@ -13,7 +13,7 @@ Supports scanning an entire channel (by ID, URL or handle), a single video URL, 
 Highlights matches in context, prints timestamps, and generates "jump-to" links, shows a progress bar, and summarizes keywords that weren't found.
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/4ngel2769/yttr-search/main/assets/yttr-search-preview.png" alt="YouTube Transcript Search Tool">
+  <img src="https://raw.githubusercontent.com/4ngel2769/yttr-search/main/assets/yttr-preview1.png" alt="YouTube Transcript Search Tool">
 </div>
 
 ---
