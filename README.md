@@ -9,7 +9,7 @@
 > Project has been moved to its own repository from [4ngel2769/side-projects](https://github.com/4ngel2769/side-projects)
 
 <div align="center">
-  <img src="https://raw.githubusercontent.com/4ngel2769/yttr-search/main/assets/yttrsch.png" alt="YouTube Transcript Search Tool" width="600">
+  <img src="https://raw.githubusercontent.com/4ngel2769/yttr-search/main/assets/yttr-search-preview.png" alt="YouTube Transcript Search Tool" width="600">
 </div>
 
 A CLI utility to search YouTube video transcripts for one or more keywords or phrases.  
