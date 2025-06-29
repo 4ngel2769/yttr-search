@@ -8,13 +8,13 @@
 > [!NOTE] 
 > Project has been moved to its own repository from [4ngel2769/side-projects](https://github.com/4ngel2769/side-projects)
 
-<div align="center">
-  <img src="https://raw.githubusercontent.com/4ngel2769/yttr-search/main/assets/yttr-search-preview.png" alt="YouTube Transcript Search Tool" width="600">
-</div>
-
 A CLI utility to search YouTube video transcripts for one or more keywords or phrases.  
 Supports scanning an entire channel (by ID, URL or handle), a single video URL, or a batch of URLs from a file.  
 Highlights matches in context, prints timestamps, and generates "jump-to" links, shows a progress bar, and summarizes keywords that weren't found.
+
+<div align="center">
+  <img src="https://raw.githubusercontent.com/4ngel2769/yttr-search/main/assets/yttr-search-preview.png" alt="YouTube Transcript Search Tool">
+</div>
 
 ---
 
