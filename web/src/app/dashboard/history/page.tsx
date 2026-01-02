@@ -10,6 +10,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { 
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { formatTimestamp } from "@/lib/utils";
 import { 
@@ -21,9 +28,19 @@ import {
   ChevronLeft,
   ChevronRight,
   Filter,
-  Calendar
+  Calendar,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
+
+type VideoInfo = {
+  videoId: string;
+  videoTitle: string;
+  thumbnailUrl: string;
+};
 
 type SearchHistoryItem = {
   id: string;
@@ -34,6 +51,7 @@ type SearchHistoryItem = {
   videosProcessed: number;
   status: string;
   createdAt: string;
+  videos?: VideoInfo[];
 };
 
 type HistoryResponse = {
@@ -51,15 +69,21 @@ export default function HistoryPage() {
   
   const [page, setPage] = useState(1);
   const [searchQuery, setSearchQuery] = useState("");
+  const [sourceType, setSourceType] = useState<string>("all");
+  const [sortBy, setSortBy] = useState<string>("createdAt");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
 
   const { data: history, isLoading } = useQuery<HistoryResponse>({
-    queryKey: ["searchHistory", page, searchQuery],
+    queryKey: ["searchHistory", page, searchQuery, sourceType, sortBy, sortOrder],
     queryFn: async () => {
       const params = new URLSearchParams({
         page: page.toString(),
         limit: "10",
+        sortBy,
+        sortOrder,
       });
       if (searchQuery) params.append("q", searchQuery);
+      if (sourceType && sourceType !== "all") params.append("sourceType", sourceType);
       
       const res = await fetch(`/api/dashboard/history?${params}`);
       if (!res.ok) throw new Error("Failed to fetch history");
