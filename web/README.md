@@ -5,29 +5,29 @@ A modern, full-stack web application for searching YouTube video transcripts. Bu
 ## Features
 
 ### Core Functionality
-- 🔍 **Transcript Search**: Search for keywords across YouTube video transcripts
-- 📺 **Multiple Source Types**: Support for channels, playlists, single videos, and batch URLs
-- ⏱️ **Timestamp Links**: Jump directly to the moment in the video where keywords are mentioned
-- 💾 **Search History**: View and manage your past searches
-- ⭐ **Saved Items**: Bookmark important results for quick access
+- **Transcript Search**: Search for keywords across YouTube video transcripts
+- **Multiple Source Types**: Support for channels, playlists, single videos, and batch URLs
+- **Timestamp Links**: Jump directly to the moment in the video where keywords are mentioned
+- **Search History**: View and manage your past searches
+- **Saved Items**: Bookmark important results for quick access
 
 ### Authentication & User Management
-- 🔐 **Multiple Auth Methods**: Email/password, Google, and GitHub OAuth
-- ✉️ **Email Verification**: Secure account creation with email verification
-- 🔄 **Password Reset**: Self-service password recovery
-- 👤 **User Profiles**: Manage account settings and preferences
+- **Multiple Auth Methods**: Email/password, Google, and GitHub OAuth
+- **Email Verification**: Secure account creation with email verification
+- **Password Reset**: Self-service password recovery
+- **User Profiles**: Manage account settings and preferences
 
 ### Subscription & Payments
-- 💳 **Stripe Integration**: Secure payment processing
-- 📊 **Tiered Plans**: Free, Starter, Pro, and Enterprise tiers
-- 🔢 **Usage Limits**: Rate limiting based on subscription tier
-- 🧾 **Billing Management**: Self-service subscription management via Stripe Customer Portal
+- **Stripe Integration**: Secure payment processing
+- **Tiered Plans**: Free, Starter, Pro, and Enterprise tiers
+- **Usage Limits**: Rate limiting based on subscription tier
+- **Billing Management**: Self-service subscription management via Stripe Customer Portal
 
 ### Admin Panel
-- 👥 **User Management**: View, edit, and manage all users
-- 📈 **Analytics Dashboard**: Monitor usage statistics and revenue
-- ⚙️ **System Configuration**: Manage application settings
-- 📝 **Audit Logs**: Track important system events
+- **User Management**: View, edit, and manage all users
+- **Analytics Dashboard**: Monitor usage statistics and revenue
+- **System Configuration**: Manage application settings
+- **Audit Logs**: Track important system events
 
 ## Tech Stack
 
@@ -280,6 +280,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Support
 
-- 📧 Email: contact-yttr@angellabs.xyz
-- 💬 Discord: [Join our community](https://discord.gg/yttr-search)
-- 📖 Documentation: [docs.yttr-search.com](https://docs.yttr-search.com)
+- Email: contact-yttr@angellabs.xyz
+- Discord: [Join our community](https://discord.gg/yttr-search)
+- Documentation: [docs.yttr-search.com](https://docs.yttr-search.com)
