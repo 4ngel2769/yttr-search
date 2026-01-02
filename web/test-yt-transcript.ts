@@ -8,6 +8,8 @@ async function main() {
   try {
     console.log('Module keys:', Object.keys(scraperModule));
     // @ts-ignore
+    console.log('Module default keys:', Object.keys(scraperModule.default));
+    // @ts-ignore
     const getSubtitles = scraperModule.getSubtitles || scraperModule.default?.getSubtitles;
     
     if (getSubtitles) {
