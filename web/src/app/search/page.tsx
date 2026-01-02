@@ -104,7 +104,7 @@ export default function SearchPage() {
 
   const mode = form.watch("mode");
 
-  // Fetch search info (remaining searches, recent history)
+  // Fetch search info (remaining searches, recent history) - only for authenticated users
   const { data: searchInfo, isLoading: isLoadingInfo } = useQuery<SearchInfo>({
     queryKey: ["searchInfo"],
     queryFn: async () => {
@@ -184,7 +184,7 @@ export default function SearchPage() {
     });
   }
 
-  // Redirect to login if not authenticated
+  // Loading state
   if (sessionStatus === "loading") {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -193,10 +193,8 @@ export default function SearchPage() {
     );
   }
 
-  if (sessionStatus === "unauthenticated") {
-    router.push("/auth/login?callbackUrl=/search");
-    return null;
-  }
+  // Allow unauthenticated access but show limited features
+  const isAuthenticated = sessionStatus === "authenticated";
 
   return (
     <div className="flex min-h-screen flex-col">
@@ -217,8 +215,21 @@ export default function SearchPage() {
                     Search for keywords across YouTube video transcripts
                   </CardDescription>
                 </CardHeader>
-                <CardContent>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                <CardContent>                  {!isAuthenticated && (
+                    <div className="mb-4 p-4 bg-muted rounded-lg border border-border">
+                      <p className="text-sm text-muted-foreground">
+                        <Info className="inline h-4 w-4 mr-1" />
+                        You're viewing search in guest mode. 
+                        <Link href="/auth/register" className="text-primary hover:underline ml-1">
+                          Sign up
+                        </Link> or 
+                        <Link href="/auth/login" className="text-primary hover:underline ml-1">
+                          log in
+                        </Link> to save your searches and track history.
+                      </p>
+                    </div>
+                  )}
+                                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
                     {/* Source Type Selection */}
                     <div className="space-y-3">
                       <Label>Source Type</Label>

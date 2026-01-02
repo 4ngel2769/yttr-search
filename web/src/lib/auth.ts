@@ -38,7 +38,9 @@ export const authOptions: NextAuthOptions = {
           throw new Error('Invalid email or password');
         }
 
-        if (!user.emailVerified) {
+        // Check if email verification is required
+        const requireEmailVerification = process.env.REQUIRE_EMAIL_VERIFICATION !== 'false';
+        if (requireEmailVerification && !user.emailVerified) {
           throw new Error('Please verify your email before logging in');
         }
 
