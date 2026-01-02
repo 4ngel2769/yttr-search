@@ -93,16 +93,16 @@ export default function SearchPage() {
   const form = useForm<SearchInput>({
     resolver: zodResolver(searchSchema),
     defaultValues: {
-      sourceType: "channel",
-      sourceValue: "",
+      mode: "channel",
+      target: "",
       keywords: "",
-      maxVideos: 50,
-      caseSensitive: false,
-      wholeWord: false,
+      maxVideos: "50",
+      sort: "newest",
+      contextWindow: 1,
     },
   });
 
-  const sourceType = form.watch("sourceType");
+  const mode = form.watch("mode");
 
   // Fetch search info (remaining searches, recent history)
   const { data: searchInfo, isLoading: isLoadingInfo } = useQuery<SearchInfo>({
@@ -223,15 +223,15 @@ export default function SearchPage() {
                     <div className="space-y-3">
                       <Label>Source Type</Label>
                       <RadioGroup
-                        value={sourceType}
-                        onValueChange={(value) => form.setValue("sourceType", value as any)}
+                        value={mode}
+                        onValueChange={(value) => form.setValue("mode", value as any)}
                         className="grid grid-cols-2 gap-4 sm:grid-cols-4"
                       >
                         <Label
                           htmlFor="channel"
                           className={cn(
                             "flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground",
-                            sourceType === "channel" && "border-primary"
+                            mode === "channel" && "border-primary"
                           )}
                         >
                           <RadioGroupItem value="channel" id="channel" className="sr-only" />
@@ -242,7 +242,7 @@ export default function SearchPage() {
                           htmlFor="playlist"
                           className={cn(
                             "flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground",
-                            sourceType === "playlist" && "border-primary"
+                            mode === "playlist" && "border-primary"
                           )}
                         >
                           <RadioGroupItem value="playlist" id="playlist" className="sr-only" />
@@ -253,7 +253,7 @@ export default function SearchPage() {
                           htmlFor="video"
                           className={cn(
                             "flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground",
-                            sourceType === "video" && "border-primary"
+                            mode === "video" && "border-primary"
                           )}
                         >
                           <RadioGroupItem value="video" id="video" className="sr-only" />
@@ -264,7 +264,7 @@ export default function SearchPage() {
                           htmlFor="batch"
                           className={cn(
                             "flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground",
-                            sourceType === "batch" && "border-primary"
+                            mode === "batch" && "border-primary"
                           )}
                         >
                           <RadioGroupItem value="batch" id="batch" className="sr-only" />
@@ -276,37 +276,37 @@ export default function SearchPage() {
 
                     {/* Source Value Input */}
                     <div className="space-y-2">
-                      <Label htmlFor="sourceValue">
-                        {sourceType === "channel" && "Channel URL or @handle"}
-                        {sourceType === "playlist" && "Playlist URL"}
-                        {sourceType === "video" && "Video URL"}
-                        {sourceType === "batch" && "Video URLs (one per line)"}
+                      <Label htmlFor="target">
+                        {mode === "channel" && "Channel URL or @handle"}
+                        {mode === "playlist" && "Playlist URL"}
+                        {mode === "video" && "Video URL"}
+                        {mode === "batch" && "Video URLs (one per line)"}
                       </Label>
-                      {sourceType === "batch" ? (
+                      {mode === "batch" ? (
                         <Textarea
-                          id="sourceValue"
+                          id="target"
                           placeholder="https://www.youtube.com/watch?v=VIDEO_ID&#10;https://youtu.be/VIDEO_ID&#10;..."
                           rows={4}
                           disabled={isSearching}
-                          {...form.register("sourceValue")}
+                          {...form.register("target")}
                         />
                       ) : (
                         <Input
-                          id="sourceValue"
+                          id="target"
                           placeholder={
-                            sourceType === "channel"
+                            mode === "channel"
                               ? "https://youtube.com/@ChannelHandle or @ChannelHandle"
-                              : sourceType === "playlist"
+                              : mode === "playlist"
                               ? "https://youtube.com/playlist?list=PLxxx..."
                               : "https://youtube.com/watch?v=VIDEO_ID"
                           }
                           disabled={isSearching}
-                          {...form.register("sourceValue")}
+                          {...form.register("target")}
                         />
                       )}
-                      {form.formState.errors.sourceValue && (
+                      {form.formState.errors.target && (
                         <p className="text-sm text-destructive">
-                          {form.formState.errors.sourceValue.message}
+                          {form.formState.errors.target.message}
                         </p>
                       )}
                     </div>
@@ -332,17 +332,17 @@ export default function SearchPage() {
                     </div>
 
                     {/* Max Videos Slider (for channel/playlist) */}
-                    {(sourceType === "channel" || sourceType === "playlist") && (
+                    {(mode === "channel" || mode === "playlist") && (
                       <div className="space-y-4">
                         <div className="flex items-center justify-between">
                           <Label>Max Videos to Search</Label>
                           <span className="text-sm text-muted-foreground">
-                            {form.watch("maxVideos")} videos
+                            {form.watch("maxVideos") || "50"} videos
                           </span>
                         </div>
                         <Slider
-                          value={[form.watch("maxVideos") || 50]}
-                          onValueChange={([value]) => form.setValue("maxVideos", value)}
+                          value={[parseInt(form.watch("maxVideos") || "50")]}
+                          onValueChange={([value]) => form.setValue("maxVideos", value.toString())}
                           min={1}
                           max={500}
                           step={10}
