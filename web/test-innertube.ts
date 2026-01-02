@@ -5,7 +5,11 @@ async function main() {
   const videoId = 'dQw4w9WgXcQ';
   console.log(`Fetching transcript for ${videoId}...`);
   try {
-    const youtube = await Innertube.create();
+    const youtube = await Innertube.create({
+        lang: 'en',
+        location: 'US',
+        retrieve_player: false
+    });
     const info = await youtube.getInfo(videoId);
     const transcriptData = await info.getTranscript();
     
