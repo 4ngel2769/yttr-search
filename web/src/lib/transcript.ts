@@ -1,5 +1,5 @@
-// @ts-ignore - youtube-transcript doesn't have types
-import { YoutubeTranscript } from 'youtube-transcript';
+import { spawn } from 'child_process';
+import path from 'path';
 
 export interface TranscriptSegment {
   text: string;
@@ -25,56 +25,60 @@ export interface SearchResult {
 }
 
 /**
- * Fetch transcript for a video
+ * Fetch transcript for a video using Python youtube_transcript_api
  */
 export async function fetchTranscript(videoId: string): Promise<TranscriptSegment[]> {
-  try {
-    const transcript = await YoutubeTranscript.fetchTranscript(videoId);
+  return new Promise((resolve, reject) => {
+    // Use Python from the venv
+    const pythonPath = process.env.PYTHON_PATH || 'C:/Users/Angel/Documents/GitHub/yttr-search/.venv/Scripts/python.exe';
+    const scriptPath = path.join(process.cwd(), 'src', 'scripts', 'fetch_transcript.py');
     
-    // Debug: log first segment to understand the structure
-    if (transcript.length > 0) {
-      console.log('Transcript segment count:', transcript.length);
-      console.log('First segment structure:', JSON.stringify(transcript[0]));
-      console.log('First segment text:', transcript[0].text);
-    } else {
-      console.log('Transcript is empty');
-    }
+    console.log(`Fetching transcript for ${videoId} using Python...`);
+    console.log(`Python path: ${pythonPath}`);
+    console.log(`Script path: ${scriptPath}`);
     
-    return transcript.map((segment: any) => {
-      // Handle different property names from different versions of youtube-transcript
-      // v1.x uses: { text, offset (ms), duration (ms) }
-      // Some versions use: { text, start (sec), dur (sec) }
-      let startTime = 0;
-      if (typeof segment.offset === 'number') {
-        startTime = segment.offset / 1000; // offset is in milliseconds
-      } else if (typeof segment.start === 'number') {
-        startTime = segment.start; // start is already in seconds
-      }
-      
-      let durationTime = 0;
-      if (typeof segment.duration === 'number') {
-        // If duration > 100, assume it's milliseconds
-        durationTime = segment.duration > 100 ? segment.duration / 1000 : segment.duration;
-      } else if (typeof segment.dur === 'number') {
-        durationTime = segment.dur;
-      }
-      
-      return {
-        text: segment.text || '',
-        start: startTime,
-        duration: durationTime,
-      };
+    const pythonProcess = spawn(pythonPath, [scriptPath, videoId]);
+    
+    let stdout = '';
+    let stderr = '';
+    
+    pythonProcess.stdout.on('data', (data) => {
+      stdout += data.toString();
     });
-  } catch (error: any) {
-    console.error('Transcript fetch error for video', videoId, ':', error);
-    if (error.message?.includes('Transcript is disabled')) {
-      throw new Error('Transcripts are disabled for this video');
-    }
-    if (error.message?.includes('No transcript')) {
-      throw new Error('No transcript available for this video');
-    }
-    throw error;
-  }
+    
+    pythonProcess.stderr.on('data', (data) => {
+      stderr += data.toString();
+    });
+    
+    pythonProcess.on('close', (code) => {
+      if (code !== 0) {
+        console.error('Python script error:', stderr);
+        
+        if (stderr.includes('TranscriptsDisabled') || stderr.includes('NoTranscriptFound')) {
+          reject(new Error('Transcripts are disabled for this video'));
+        } else if (stderr.includes('VideoUnavailable')) {
+          reject(new Error('Video not available'));
+        } else {
+          reject(new Error(`Python script failed: ${stderr}`));
+        }
+        return;
+      }
+      
+      try {
+        const segments = JSON.parse(stdout) as TranscriptSegment[];
+        console.log(`Fetched ${segments.length} transcript segments for ${videoId}`);
+        resolve(segments);
+      } catch (parseError: any) {
+        console.error('Failed to parse Python output:', stdout);
+        reject(new Error(`Failed to parse transcript: ${parseError.message}`));
+      }
+    });
+    
+    pythonProcess.on('error', (err) => {
+      console.error('Failed to start Python process:', err);
+      reject(new Error(`Failed to start Python: ${err.message}`));
+    });
+  });
 }
 
 /**

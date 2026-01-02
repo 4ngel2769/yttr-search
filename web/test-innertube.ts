@@ -8,7 +8,8 @@ async function main() {
     const youtube = await Innertube.create({
         lang: 'en',
         location: 'US',
-        retrieve_player: false
+        retrieve_player: false,
+        client_type: 'WEB' // Try explicit client type
     });
     const info = await youtube.getInfo(videoId);
     const transcriptData = await info.getTranscript();
