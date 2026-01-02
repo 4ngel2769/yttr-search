@@ -245,10 +245,10 @@ export default function AdminUsersPage() {
                             </td>
                             <td className="py-3 px-4">
                               <Badge 
-                                variant={user.role === "ADMIN" ? "default" : "secondary"}
+                                variant={user.isAdmin ? "default" : "secondary"}
                               >
-                                {user.role === "ADMIN" && <Shield className="h-3 w-3 mr-1" />}
-                                {user.role}
+                                {user.isAdmin && <Shield className="h-3 w-3 mr-1" />}
+                                {user.isAdmin ? "Admin" : "User"}
                               </Badge>
                             </td>
                             <td className="py-3 px-4">
