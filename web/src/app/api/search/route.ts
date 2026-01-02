@@ -1,48 +1,65 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
+import { headers } from "next/headers";
 import { authOptions } from "@/lib/auth";
 import { searchSchema } from "@/lib/validations";
 import { performSearch, getTierLimits } from "@/lib/search";
-import { searchRateLimiter } from "@/lib/redis";
+import { searchRateLimiter, anonymousSearchRateLimiter } from "@/lib/redis";
 import { prisma } from "@/lib/prisma";
+
+// Anonymous rate limiter (10 searches per day)
+const ANONYMOUS_DAILY_LIMIT = 10;
 
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
+    const headersList = await headers();
+    const ipAddress = headersList.get("x-forwarded-for")?.split(",")[0] || 
+                      headersList.get("x-real-ip") || 
+                      "unknown";
     
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
-    }
-
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { id: true, tier: true, isAdmin: true },
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { error: "User not found" },
-        { status: 404 }
-      );
-    }
-
-    // Check rate limit (skip for admins)
-    let rateLimitResult = { allowed: true, remaining: 999999, resetAt: new Date() };
-    if (!user.isAdmin) {
-      rateLimitResult = await searchRateLimiter.check(user.id);
-      if (!rateLimitResult.allowed) {
-        return NextResponse.json(
-          { 
-            error: "Rate limit exceeded",
-            remaining: 0,
-            message: `You have reached your daily search limit. Upgrade your plan for more searches.`
-          },
-          { status: 429 }
-        );
+    let user = null;
+    let userId: string | null = null;
+    let isAdmin = false;
+    let rateLimitResult = { allowed: true, remaining: ANONYMOUS_DAILY_LIMIT, resetAt: new Date() };
+    
+    // Check if user is authenticated
+    if (session?.user?.email) {
+      user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { id: true, tier: true, isAdmin: true },
+      });
+      
+      if (user) {
+        userId = user.id;
+        isAdmin = user.isAdmin;
+        
+        // Check rate limit for authenticated users (skip for admins)
+        if (!isAdmin) {
+          rateLimitResult = await searchRateLimiter.check(user.id);
+        } else {
+          rateLimitResult = { allowed: true, remaining: 999999, resetAt: new Date() };
+        }
       }
+    } else {
+      // Anonymous user - use IP-based rate limiting with dedicated limiter
+      const anonKey = `anon:${ipAddress}`;
+      rateLimitResult = await anonymousSearchRateLimiter.check(anonKey);
+    }
+    
+    // Check if rate limit exceeded
+    if (!rateLimitResult.allowed) {
+      const message = session?.user?.email 
+        ? "You have reached your daily search limit. Upgrade your plan for more searches."
+        : "You have reached the free search limit. Sign up for a free account to get more searches!";
+      return NextResponse.json(
+        { 
+          error: "Rate limit exceeded",
+          remaining: 0,
+          message
+        },
+        { status: 429 }
+      );
     }
 
     const body = await request.json();
@@ -60,7 +77,8 @@ export async function POST(request: Request) {
     // Perform the search
     const result = await performSearch({
       ...searchParams,
-      userId: user.id,
+      userId: userId,
+      ipAddress: ipAddress,
       maxVideos: searchParams.maxVideos ? parseInt(searchParams.maxVideos) : undefined,
     });
 
@@ -101,12 +119,22 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
+    const headersList = await headers();
+    const ipAddress = headersList.get("x-forwarded-for")?.split(",")[0] || 
+                      headersList.get("x-real-ip") || 
+                      "unknown";
     
+    // For anonymous users, return basic info with IP-based remaining count
     if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+      // Check anonymous rate limit status (without incrementing)
+      const anonKey = `anon:${ipAddress}`;
+      const rateLimitStatus = await anonymousSearchRateLimiter.peek(anonKey);
+      
+      return NextResponse.json({
+        remaining: rateLimitStatus.remaining,
+        tier: "ANONYMOUS",
+        recentSearches: [],
+      });
     }
 
     const user = await prisma.user.findUnique({

@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
@@ -17,8 +17,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { useToast } from "@/hooks/use-toast";
 import { searchSchema, type SearchInput } from "@/lib/validations";
 import { formatTimestamp, cn } from "@/lib/utils";
@@ -29,17 +33,15 @@ import {
   ListVideo, 
   Link as LinkIcon, 
   List,
-  ExternalLink,
   Clock,
   CheckCircle2,
   AlertCircle,
   Info,
   Copy,
-  Bookmark,
-  Trash2,
   History
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 type SearchResult = {
   id: string;
@@ -75,6 +77,109 @@ type SearchInfo = {
   }[];
 };
 
+// Keyword highlight colors - cycling through these for multiple keywords
+const KEYWORD_COLORS = [
+  { bg: "bg-cyan-500", text: "text-cyan-500", underline: "decoration-cyan-500" },
+  { bg: "bg-lime-500", text: "text-lime-500", underline: "decoration-lime-500" },
+  { bg: "bg-orange-500", text: "text-orange-500", underline: "decoration-orange-500" },
+  { bg: "bg-pink-500", text: "text-pink-500", underline: "decoration-pink-500" },
+  { bg: "bg-purple-500", text: "text-purple-500", underline: "decoration-purple-500" },
+  { bg: "bg-yellow-500", text: "text-yellow-500", underline: "decoration-yellow-500" },
+];
+
+// Component to render highlighted text with clickable keyword links
+function HighlightedSnippet({ 
+  text, 
+  keywords, 
+  videoUrl 
+}: { 
+  text: string; 
+  keywords: string[]; 
+  videoUrl: string;
+}) {
+  // Create a map of keyword to color
+  const keywordColorMap = useMemo(() => {
+    const map = new Map<string, typeof KEYWORD_COLORS[0]>();
+    keywords.forEach((kw, index) => {
+      map.set(kw.toLowerCase(), KEYWORD_COLORS[index % KEYWORD_COLORS.length]);
+    });
+    return map;
+  }, [keywords]);
+
+  // Split text by keywords and create highlighted segments
+  const parts = useMemo(() => {
+    if (keywords.length === 0) return [{ text, isKeyword: false, keyword: "" }];
+    
+    // Create regex pattern for all keywords (case insensitive)
+    const pattern = new RegExp(
+      `(${keywords.map(k => k.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')).join('|')})`,
+      'gi'
+    );
+    
+    const segments: { text: string; isKeyword: boolean; keyword: string }[] = [];
+    let lastIndex = 0;
+    let match;
+    
+    while ((match = pattern.exec(text)) !== null) {
+      // Add text before the match
+      if (match.index > lastIndex) {
+        segments.push({
+          text: text.slice(lastIndex, match.index),
+          isKeyword: false,
+          keyword: ""
+        });
+      }
+      // Add the matched keyword
+      segments.push({
+        text: match[0],
+        isKeyword: true,
+        keyword: match[0].toLowerCase()
+      });
+      lastIndex = pattern.lastIndex;
+    }
+    
+    // Add remaining text after last match
+    if (lastIndex < text.length) {
+      segments.push({
+        text: text.slice(lastIndex),
+        isKeyword: false,
+        keyword: ""
+      });
+    }
+    
+    return segments;
+  }, [text, keywords]);
+
+  return (
+    <span className="text-sm text-muted-foreground">
+      &quot;...
+      {parts.map((part, index) => {
+        if (part.isKeyword) {
+          const color = keywordColorMap.get(part.keyword) || KEYWORD_COLORS[0];
+          return (
+            <a
+              key={index}
+              href={videoUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(
+                "font-semibold underline decoration-2 hover:opacity-80 transition-opacity cursor-pointer",
+                color.text,
+                color.underline
+              )}
+              title={`Watch "${part.text}" on YouTube`}
+            >
+              {part.text}
+            </a>
+          );
+        }
+        return <span key={index}>{part.text}</span>;
+      })}
+      ...&quot;
+    </span>
+  );
+}
+
 export default function SearchPage() {
   const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
@@ -93,7 +198,7 @@ export default function SearchPage() {
   const form = useForm<SearchInput>({
     resolver: zodResolver(searchSchema),
     defaultValues: {
-      mode: "channel",
+      mode: "video",
       target: "",
       keywords: "",
       maxVideos: "50",
@@ -126,6 +231,10 @@ export default function SearchPage() {
       });
       
       if (!res.ok) {
+        // Handle 401 unauthorized
+        if (res.status === 401) {
+          throw new Error("Please log in to search. Create a free account to get started!");
+        }
         const error = await res.json();
         throw new Error(error.error || "Search failed");
       }
@@ -239,6 +348,17 @@ export default function SearchPage() {
                         className="grid grid-cols-2 gap-4 sm:grid-cols-4"
                       >
                         <Label
+                          htmlFor="video"
+                          className={cn(
+                            "flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground",
+                            mode === "video" && "border-primary"
+                          )}
+                        >
+                          <RadioGroupItem value="video" id="video" className="sr-only" />
+                          <LinkIcon className="mb-2 h-6 w-6" />
+                          <span className="text-sm font-medium">Video</span>
+                        </Label>
+                        <Label
                           htmlFor="channel"
                           className={cn(
                             "flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground",
@@ -259,17 +379,6 @@ export default function SearchPage() {
                           <RadioGroupItem value="playlist" id="playlist" className="sr-only" />
                           <ListVideo className="mb-2 h-6 w-6" />
                           <span className="text-sm font-medium">Playlist</span>
-                        </Label>
-                        <Label
-                          htmlFor="video"
-                          className={cn(
-                            "flex cursor-pointer flex-col items-center justify-center rounded-md border-2 border-muted bg-transparent p-4 hover:bg-accent hover:text-accent-foreground",
-                            mode === "video" && "border-primary"
-                          )}
-                        >
-                          <RadioGroupItem value="video" id="video" className="sr-only" />
-                          <LinkIcon className="mb-2 h-6 w-6" />
-                          <span className="text-sm font-medium">Video</span>
                         </Label>
                         <Label
                           htmlFor="batch"
@@ -421,64 +530,120 @@ export default function SearchPage() {
                         </p>
                       </div>
                     ) : (
-                      <Accordion type="single" collapsible className="w-full">
-                        {searchResults.map((result, index) => (
-                          <AccordionItem key={result.id} value={result.id}>
-                            <AccordionTrigger className="hover:no-underline">
-                              <div className="flex items-start gap-4 text-left">
-                                <div className="flex-1">
-                                  <p className="font-medium line-clamp-1">{result.videoTitle}</p>
-                                  <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
-                                    <Clock className="h-3 w-3" />
-                                    <span>{formatTimestamp(result.timestamp)}</span>
-                                    <span>•</span>
-                                    <span>{result.channelTitle}</span>
+                      <TooltipProvider>
+                        <div className="space-y-3">
+                          {/* Group results by video for single video mode - only show title once */}
+                          {(() => {
+                            const uniqueVideoIds = new Set(searchResults.map(r => r.videoId));
+                            const isSingleVideo = uniqueVideoIds.size === 1;
+                            const firstResult = searchResults[0];
+                            
+                            return (
+                              <>
+                                {/* Show video title and thumbnail for single video searches */}
+                                {isSingleVideo && firstResult && (
+                                  <div className="mb-4 pb-3 border-b flex items-start gap-4">
+                                    <div className="flex-1 min-w-0">
+                                      <a 
+                                        href={`https://www.youtube.com/watch?v=${firstResult.videoId}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="font-medium text-primary hover:underline"
+                                      >
+                                        {firstResult.videoTitle}
+                                      </a>
+                                    </div>
+                                    <a
+                                      href={`https://www.youtube.com/watch?v=${firstResult.videoId}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="shrink-0"
+                                    >
+                                      <Image
+                                        src={`https://i.ytimg.com/vi/${firstResult.videoId}/mqdefault.jpg`}
+                                        alt={firstResult.videoTitle}
+                                        width={160}
+                                        height={90}
+                                        className="rounded-md hover:opacity-90 transition-opacity"
+                                      />
+                                    </a>
                                   </div>
-                                </div>
-                                <div className="flex gap-1">
-                                  {result.matchedKeywords.slice(0, 3).map((keyword) => (
-                                    <Badge key={keyword} variant="secondary" className="text-xs">
-                                      {keyword}
-                                    </Badge>
-                                  ))}
-                                  {result.matchedKeywords.length > 3 && (
-                                    <Badge variant="outline" className="text-xs">
-                                      +{result.matchedKeywords.length - 3}
-                                    </Badge>
-                                  )}
-                                </div>
-                              </div>
-                            </AccordionTrigger>
-                            <AccordionContent>
-                              <div className="space-y-4 pt-2">
-                                <p className="text-sm bg-muted p-3 rounded-md">
-                                  &quot;...{result.text}...&quot;
-                                </p>
-                                <div className="flex gap-2">
-                                  <Button asChild size="sm" variant="default">
+                                )}
+                                
+                                {/* Results list */}
+                                {searchResults.map((result) => (
+                                  <div 
+                                    key={result.id} 
+                                    className="flex items-start gap-3 py-2 px-3 rounded-md hover:bg-muted/50 transition-colors group"
+                                  >
+                                    {/* Timestamp link */}
                                     <a
                                       href={result.videoUrl}
                                       target="_blank"
                                       rel="noopener noreferrer"
+                                      className="flex items-center gap-1.5 text-sm font-mono text-primary hover:underline shrink-0 min-w-[70px]"
                                     >
-                                      <ExternalLink className="mr-2 h-4 w-4" />
-                                      Watch at Timestamp
+                                      <Clock className="h-3.5 w-3.5" />
+                                      {formatTimestamp(result.timestamp)}
                                     </a>
-                                  </Button>
-                                  <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => copyToClipboard(result.videoUrl)}
-                                  >
-                                    <Copy className="mr-2 h-4 w-4" />
-                                    Copy Link
-                                  </Button>
-                                </div>
-                              </div>
-                            </AccordionContent>
-                          </AccordionItem>
-                        ))}
-                      </Accordion>
+                                    
+                                    {/* Snippet with highlighted keywords */}
+                                    <div className="flex-1 min-w-0">
+                                      {/* Show video title with thumbnail for multi-video results */}
+                                      {!isSingleVideo && (
+                                        <div className="flex items-center gap-2 mb-1">
+                                          <a
+                                            href={`https://www.youtube.com/watch?v=${result.videoId}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="shrink-0"
+                                          >
+                                            <Image
+                                              src={`https://i.ytimg.com/vi/${result.videoId}/default.jpg`}
+                                              alt={result.videoTitle}
+                                              width={60}
+                                              height={45}
+                                              className="rounded hover:opacity-90 transition-opacity"
+                                            />
+                                          </a>
+                                          <a
+                                            href={`https://www.youtube.com/watch?v=${result.videoId}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="text-sm font-medium text-foreground hover:text-primary line-clamp-2"
+                                          >
+                                            {result.videoTitle}
+                                          </a>
+                                        </div>
+                                      )}
+                                      <HighlightedSnippet 
+                                        text={result.text}
+                                        keywords={result.matchedKeywords}
+                                        videoUrl={result.videoUrl}
+                                      />
+                                    </div>
+                                    
+                                    {/* Copy button with tooltip */}
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <button
+                                          onClick={() => copyToClipboard(result.videoUrl)}
+                                          className="p-1.5 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                        >
+                                          <Copy className="h-4 w-4" />
+                                        </button>
+                                      </TooltipTrigger>
+                                      <TooltipContent side="left">
+                                        <p>Copy link</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </div>
+                                ))}
+                              </>
+                            );
+                          })()}
+                        </div>
+                      </TooltipProvider>
                     )}
                   </CardContent>
                 </Card>

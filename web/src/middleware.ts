@@ -22,6 +22,7 @@ export async function middleware(request: NextRequest) {
     "/auth/verify-email",
     "/api/auth",
     "/api/stripe/webhook",
+    "/api/search",
   ];
 
   // Check if the route is public
@@ -34,7 +35,17 @@ export async function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Redirect to login if not authenticated
+  // For API routes, return 401 JSON instead of redirecting
+  if (pathname.startsWith("/api/")) {
+    if (!token) {
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+  }
+
+  // Redirect to login if not authenticated (for non-API routes)
   if (!token) {
     const loginUrl = new URL("/auth/login", request.url);
     loginUrl.searchParams.set("callbackUrl", pathname);
