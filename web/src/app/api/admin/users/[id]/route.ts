@@ -49,8 +49,7 @@ export async function GET(
         subscription: {
           select: {
             status: true,
-            currentPeriodStart: true,
-            currentPeriodEnd: true,
+            stripeCurrentPeriodEnd: true,
           },
         },
       },
@@ -130,9 +129,11 @@ export async function PATCH(
     // Log the action
     await prisma.auditLog.create({
       data: {
-        userId: currentUser.id,
+        adminId: currentUser.id,
         action: "USER_UPDATED",
-        details: { targetUserId: params.id, updates: updateData },
+        targetType: "user",
+        targetId: params.id,
+        details: { updates: updateData },
       },
     });
 
@@ -163,10 +164,10 @@ export async function DELETE(
 
     const currentUser = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { role: true, id: true },
+      select: { isAdmin: true, id: true },
     });
 
-    if (!currentUser || currentUser.role !== "ADMIN") {
+    if (!currentUser || !currentUser.isAdmin) {
       return NextResponse.json(
         { error: "Admin access required" },
         { status: 403 }
@@ -196,10 +197,10 @@ export async function DELETE(
         where: { userId: params.id },
       }),
       prisma.rateLimit.deleteMany({
-        where: { userId: params.id },
+        where: { identifier: params.id },
       }),
       prisma.auditLog.deleteMany({
-        where: { userId: params.id },
+        where: { adminId: params.id },
       }),
       prisma.account.deleteMany({
         where: { userId: params.id },
@@ -215,9 +216,11 @@ export async function DELETE(
     // Log the action
     await prisma.auditLog.create({
       data: {
-        userId: currentUser.id,
+        adminId: currentUser.id,
         action: "USER_DELETED",
-        details: { deletedUserId: params.id },
+        targetType: "user",
+        targetId: params.id,
+        details: {},
       },
     });
 

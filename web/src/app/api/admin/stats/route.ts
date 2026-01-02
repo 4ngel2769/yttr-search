@@ -61,13 +61,23 @@ export async function GET() {
       prisma.auditLog.findMany({
         orderBy: { createdAt: "desc" },
         take: 10,
-        include: {
-          user: {
-            select: { name: true, email: true },
-          },
+        select: {
+          id: true,
+          adminId: true,
+          action: true,
+          targetType: true,
+          createdAt: true,
         },
       }),
     ]);
+
+    // Get admin users for activity log
+    const adminIds = [...new Set(recentActivity.map(log => log.adminId))];
+    const admins = await prisma.user.findMany({
+      where: { id: { in: adminIds } },
+      select: { id: true, name: true, email: true },
+    });
+    const adminMap = new Map(admins.map(a => [a.id, a]));
 
     // Format subscription counts
     const subscriptions = {
@@ -78,21 +88,35 @@ export async function GET() {
     };
 
     subscriptionCounts.forEach((count) => {
-      const tier = count.tier.toLowerCase() as keyof typeof subscriptions;
-      if (tier in subscriptions) {
-        subscriptions[tier] = count._count.tier;
+      switch (count.tier) {
+        case "FREE":
+          subscriptions.free = count._count.tier;
+          break;
+        case "TIER1":
+          subscriptions.starter = count._count.tier;
+          break;
+        case "TIER2":
+          subscriptions.pro = count._count.tier;
+          break;
+        case "TIER3":
+          subscriptions.enterprise = count._count.tier;
+          break;
       }
     });
 
     // Format recent activity
-    const formattedActivity = recentActivity.map((log) => ({
-      type: log.action.toLowerCase().includes("search") ? "search" :
-            log.action.toLowerCase().includes("subscription") ? "subscription" : "user",
-      userId: log.userId,
-      userName: log.user?.name || log.user?.email || "Unknown",
-      action: log.action.replace(/_/g, " ").toLowerCase(),
-      createdAt: log.createdAt.toISOString(),
-    }));
+    const formattedActivity = recentActivity.map((log) => {
+      const admin = adminMap.get(log.adminId);
+      return {
+        type: log.action.toLowerCase().includes("search") ? "search" :
+              log.action.toLowerCase().includes("subscription") ? "subscription" : 
+              log.action.toLowerCase().includes("payment") ? "payment" : "user",
+        userId: log.adminId,
+        userName: admin?.name || admin?.email || "Unknown",
+        action: log.action.replace(/_/g, " ").toLowerCase(),
+        createdAt: log.createdAt.toISOString(),
+      };
+    });
 
     // Calculate revenue (simplified - would need actual payment data)
     const paidUsers = subscriptions.starter + subscriptions.pro + subscriptions.enterprise;
