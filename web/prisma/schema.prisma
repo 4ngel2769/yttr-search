@@ -1,0 +1,275 @@
+// Prisma schema for YTTR Search Web Application
+// Run `npx prisma generate` after changes
+// Run `npx prisma db push` to sync with database
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================
+// Authentication Models (NextAuth.js)
+// ============================================
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@index([userId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}
+
+// ============================================
+// User Model
+// ============================================
+
+enum UserTier {
+  FREE
+  TIER1
+  TIER2
+  TIER3
+}
+
+model User {
+  id              String    @id @default(cuid())
+  email           String    @unique
+  emailVerified   DateTime?
+  passwordHash    String?   // null for OAuth-only users
+  name            String?
+  image           String?
+  tier            UserTier  @default(FREE)
+  
+  // Stripe integration
+  stripeCustomerId     String?   @unique
+  stripeSubscriptionId String?   @unique
+  
+  // Status flags
+  isSuspended     Boolean   @default(false)
+  isAdmin         Boolean   @default(false)
+  
+  // Timestamps
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+  lastLoginAt     DateTime?
+  
+  // API Key for programmatic access
+  apiKey          String?   @unique
+  apiKeyCreatedAt DateTime?
+  
+  // Relations
+  accounts        Account[]
+  sessions        Session[]
+  searches        Search[]
+  savedItems      SavedItem[]
+  subscription    Subscription?
+
+  @@index([email])
+  @@index([stripeCustomerId])
+}
+
+// ============================================
+// Search & History Models
+// ============================================
+
+enum SearchMode {
+  CHANNEL
+  VIDEO
+  BATCH
+  PLAYLIST
+}
+
+model Search {
+  id              String     @id @default(cuid())
+  userId          String?    // nullable for anonymous searches
+  
+  // Search parameters
+  searchMode      SearchMode
+  keywords        String[]
+  target          String     // channel ID, video URL, playlist URL
+  
+  // Filters (stored as JSON)
+  filters         Json?      // { sort, max, duration, contextWindow }
+  
+  // Results metadata
+  resultsCount    Int        @default(0)
+  videosScanned   Int        @default(0)
+  executionTimeMs Int        @default(0)
+  
+  // Rate limiting info
+  ipAddress       String?
+  
+  // Timestamp
+  createdAt       DateTime   @default(now())
+  
+  // Relations
+  user            User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  results         SearchResult[]
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([ipAddress])
+}
+
+model SearchResult {
+  id          String   @id @default(cuid())
+  searchId    String
+  
+  // Video info
+  videoId     String
+  videoTitle  String
+  videoUrl    String
+  thumbnailUrl String?
+  
+  // Match data
+  matchCount  Int      @default(0)
+  matches     Json     // Array of { timestamp, text, keyword }
+  
+  // Relation
+  search      Search   @relation(fields: [searchId], references: [id], onDelete: Cascade)
+
+  @@index([searchId])
+  @@index([videoId])
+}
+
+// ============================================
+// Saved Items Model
+// ============================================
+
+enum SavedItemType {
+  VIDEO
+  CHANNEL
+  PLAYLIST
+}
+
+model SavedItem {
+  id          String        @id @default(cuid())
+  userId      String
+  
+  itemType    SavedItemType
+  itemId      String        // YouTube ID
+  itemTitle   String
+  itemUrl     String
+  thumbnailUrl String?
+  notes       String?       @db.Text
+  
+  createdAt   DateTime      @default(now())
+  
+  user        User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, itemType, itemId])
+  @@index([userId])
+}
+
+// ============================================
+// Subscription Model (Stripe)
+// ============================================
+
+enum SubscriptionStatus {
+  ACTIVE
+  CANCELED
+  INCOMPLETE
+  INCOMPLETE_EXPIRED
+  PAST_DUE
+  TRIALING
+  UNPAID
+}
+
+model Subscription {
+  id                     String             @id @default(cuid())
+  userId                 String             @unique
+  
+  stripeSubscriptionId   String             @unique
+  stripePriceId          String
+  stripeCurrentPeriodEnd DateTime
+  
+  status                 SubscriptionStatus @default(ACTIVE)
+  cancelAtPeriodEnd      Boolean            @default(false)
+  
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+  
+  user                   User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([stripeSubscriptionId])
+}
+
+// ============================================
+// Rate Limiting (primarily in Redis, but backup)
+// ============================================
+
+model RateLimit {
+  id          String   @id @default(cuid())
+  identifier  String   @unique // IP address or user ID
+  
+  searchCount Int      @default(0)
+  windowStart DateTime @default(now())
+  
+  updatedAt   DateTime @updatedAt
+
+  @@index([identifier])
+  @@index([windowStart])
+}
+
+// ============================================
+// System Configuration
+// ============================================
+
+model SystemConfig {
+  id        String   @id @default(cuid())
+  key       String   @unique
+  value     Json
+  updatedAt DateTime @updatedAt
+}
+
+// ============================================
+// Audit Log (for admin actions)
+// ============================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  adminId     String
+  action      String   // e.g., "user.suspend", "config.update"
+  targetType  String?  // e.g., "user", "config"
+  targetId    String?
+  details     Json?
+  ipAddress   String?
+  createdAt   DateTime @default(now())
+
+  @@index([adminId])
+  @@index([createdAt])
+  @@index([action])
+}
