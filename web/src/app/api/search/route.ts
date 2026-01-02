@@ -3,7 +3,7 @@ import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { searchSchema } from "@/lib/validations";
 import { performSearch } from "@/lib/search";
-import { checkRateLimit, getRemainingSearches } from "@/lib/redis";
+import { searchRateLimiter } from "@/lib/redis";
 import { prisma } from "@/lib/prisma";
 
 export async function POST(request: Request) {
@@ -30,13 +30,12 @@ export async function POST(request: Request) {
     }
 
     // Check rate limit
-    const canProceed = await checkRateLimit(user.id, user.tier);
-    if (!canProceed) {
-      const remaining = await getRemainingSearches(user.id, user.tier);
+    const rateLimitResult = await searchRateLimiter.check(user.id);
+    if (!rateLimitResult.allowed) {
       return NextResponse.json(
         { 
           error: "Rate limit exceeded",
-          remaining,
+          remaining: 0,
           message: `You have reached your daily search limit. Upgrade your plan for more searches.`
         },
         { status: 429 }
@@ -59,18 +58,16 @@ export async function POST(request: Request) {
     const result = await performSearch({
       ...searchParams,
       userId: user.id,
+      maxVideos: searchParams.maxVideos ? parseInt(searchParams.maxVideos) : undefined,
     });
-
-    // Get remaining searches after this one
-    const remaining = await getRemainingSearches(user.id, user.tier);
 
     return NextResponse.json({
       success: true,
       searchId: result.searchId,
       results: result.results,
-      totalVideosProcessed: result.totalVideosProcessed,
+      totalVideosProcessed: result.videosScanned,
       totalMatches: result.totalMatches,
-      remaining,
+      remaining: rateLimitResult.remaining,
     });
 
   } catch (error) {
@@ -106,30 +103,33 @@ export async function GET(request: Request) {
     }
 
     // Get remaining searches
-    const remaining = await getRemainingSearches(user.id, user.tier);
+    const rateLimitResult = await searchRateLimiter.check(user.id);
 
     // Get recent searches
     const recentSearches = await prisma.search.findMany({
       where: { userId: user.id },
       orderBy: { createdAt: "desc" },
       take: 10,
-      include: {
-        _count: {
-          select: { results: true },
-        },
+      select: {
+        id: true,
+        keywords: true,
+        searchMode: true,
+        target: true,
+        resultsCount: true,
+        createdAt: true,
       },
     });
 
     return NextResponse.json({
-      remaining,
+      remaining: rateLimitResult.remaining,
       tier: user.tier,
       recentSearches: recentSearches.map((s) => ({
         id: s.id,
         keywords: s.keywords,
-        sourceType: s.sourceType,
-        sourceValue: s.sourceValue,
-        matchCount: s._count.results,
-        status: s.status,
+        sourceType: s.searchMode,
+        sourceValue: s.target,
+        matchCount: s.resultsCount,
+        status: "COMPLETED",
         createdAt: s.createdAt,
       })),
     });

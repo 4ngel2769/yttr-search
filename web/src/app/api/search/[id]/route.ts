@@ -36,7 +36,7 @@ export async function GET(
       },
       include: {
         results: {
-          orderBy: { createdAt: "asc" },
+          orderBy: { id: "asc" },
         },
       },
     });
@@ -52,23 +52,18 @@ export async function GET(
       search: {
         id: search.id,
         keywords: search.keywords,
-        sourceType: search.sourceType,
-        sourceValue: search.sourceValue,
-        status: search.status,
-        videosProcessed: search.videosProcessed,
-        matchCount: search.matchCount,
+        searchMode: search.searchMode,
+        target: search.target,
+        resultsCount: search.resultsCount,
+        videosScanned: search.videosScanned,
         createdAt: search.createdAt,
-        completedAt: search.completedAt,
       },
       results: search.results.map((r) => ({
         id: r.id,
         videoId: r.videoId,
         videoTitle: r.videoTitle,
-        channelTitle: r.channelTitle,
-        timestamp: r.timestamp,
-        text: r.text,
-        matchedKeywords: r.matchedKeywords,
-        videoUrl: `https://www.youtube.com/watch?v=${r.videoId}&t=${Math.floor(r.timestamp)}`,
+        videoUrl: r.videoUrl,
+        matches: r.matches,
       })),
     });
 

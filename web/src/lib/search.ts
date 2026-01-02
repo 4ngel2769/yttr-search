@@ -38,6 +38,7 @@ export interface SearchProgress {
 }
 
 export interface FullSearchResult {
+  searchId?: string;
   results: SearchResult[];
   totalMatches: number;
   videosScanned: number;
@@ -246,6 +247,7 @@ export async function performSearch(
   const executionTimeMs = Date.now() - startTime;
 
   // Save search to database
+  let searchId: string | undefined;
   if (options.userId || options.ipAddress) {
     try {
       const search = await prisma.search.create({
@@ -266,6 +268,8 @@ export async function performSearch(
           ipAddress: options.ipAddress || null,
         },
       });
+
+      searchId = search.id;
 
       // Save results
       if (results.length > 0) {
@@ -294,6 +298,7 @@ export async function performSearch(
   });
 
   return {
+    searchId,
     results,
     totalMatches: results.reduce((acc, r) => acc + r.matchCount, 0),
     videosScanned: videoIds.length,
