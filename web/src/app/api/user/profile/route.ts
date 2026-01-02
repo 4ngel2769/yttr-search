@@ -23,11 +23,11 @@ export async function GET() {
         tier: true,
         createdAt: true,
         emailVerified: true,
-        password: true,
+        passwordHash: true,
         subscription: {
           select: {
             status: true,
-            currentPeriodEnd: true,
+            stripeCurrentPeriodEnd: true,
           },
         },
       },
@@ -47,7 +47,7 @@ export async function GET() {
       tier: user.tier,
       createdAt: user.createdAt,
       emailVerified: !!user.emailVerified,
-      hasPassword: !!user.password,
+      hasPassword: !!user.passwordHash,
       subscription: user.subscription,
     });
 

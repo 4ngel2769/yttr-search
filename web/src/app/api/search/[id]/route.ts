@@ -32,7 +32,7 @@ export async function GET(
 
     const search = await prisma.search.findFirst({
       where: {
-        id: params.id,
+        id,
         userId: user.id,
       },
       include: {
