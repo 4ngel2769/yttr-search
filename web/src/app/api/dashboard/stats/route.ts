@@ -2,7 +2,8 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
-import { getRemainingSearches, TIER_LIMITS } from "@/lib/redis";
+import { searchRateLimiter } from "@/lib/redis";
+import { getTierLimits } from "@/lib/search";
 
 export async function GET() {
   try {
@@ -57,24 +58,30 @@ export async function GET() {
         select: {
           id: true,
           keywords: true,
-          sourceType: true,
-          matchCount: true,
+          searchMode: true,
+          resultsCount: true,
           createdAt: true,
         },
       }),
     ]);
 
-    const remainingSearches = await getRemainingSearches(user.id, user.tier);
-    const dailyLimit = TIER_LIMITS[user.tier as keyof typeof TIER_LIMITS] || TIER_LIMITS.FREE;
+    const rateLimitResult = await searchRateLimiter.check(user.id);
+    const tierLimits = getTierLimits(user.tier);
 
     return NextResponse.json({
       totalSearches,
       searchesToday,
-      remainingSearches,
-      dailyLimit,
+      remainingSearches: rateLimitResult.remaining,
+      dailyLimit: tierLimits.searches,
       tier: user.tier,
       savedItems,
-      recentSearches,
+      recentSearches: recentSearches.map((s) => ({
+        id: s.id,
+        keywords: s.keywords,
+        sourceType: s.searchMode,
+        matchCount: s.resultsCount,
+        createdAt: s.createdAt,
+      })),
     });
 
   } catch (error) {
