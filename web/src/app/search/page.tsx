@@ -354,28 +354,6 @@ export default function SearchPage() {
                       </div>
                     )}
 
-                    {/* Search Options */}
-                    <div className="flex flex-wrap gap-4">
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          className="rounded border-gray-300"
-                          disabled={isSearching}
-                          {...form.register("caseSensitive")}
-                        />
-                        Case sensitive
-                      </label>
-                      <label className="flex items-center gap-2 text-sm">
-                        <input
-                          type="checkbox"
-                          className="rounded border-gray-300"
-                          disabled={isSearching}
-                          {...form.register("wholeWord")}
-                        />
-                        Whole word match
-                      </label>
-                    </div>
-
                     {/* Progress Bar */}
                     {isSearching && (
                       <div className="space-y-2">
