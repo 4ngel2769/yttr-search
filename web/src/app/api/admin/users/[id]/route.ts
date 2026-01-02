@@ -5,9 +5,10 @@ import { prisma } from "@/lib/prisma";
 
 export async function GET(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
@@ -30,7 +31,7 @@ export async function GET(
     }
 
     const user = await prisma.user.findUnique({
-      where: { id: params.id },
+      where: { id },
       select: {
         id: true,
         name: true,
@@ -75,9 +76,10 @@ export async function GET(
 
 export async function PATCH(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
@@ -103,7 +105,7 @@ export async function PATCH(
     const { tier, isAdmin } = body;
 
     // Prevent self-demotion
-    if (params.id === currentUser.id && isAdmin === false) {
+    if (id === currentUser.id && isAdmin === false) {
       return NextResponse.json(
         { error: "Cannot remove your own admin privileges" },
         { status: 400 }
@@ -115,7 +117,7 @@ export async function PATCH(
     if (typeof isAdmin === 'boolean') updateData.isAdmin = isAdmin;
 
     const user = await prisma.user.update({
-      where: { id: params.id },
+      where: { id },
       data: updateData,
       select: {
         id: true,
@@ -132,7 +134,7 @@ export async function PATCH(
         adminId: currentUser.id,
         action: "USER_UPDATED",
         targetType: "user",
-        targetId: params.id,
+        targetId: id,
         details: { updates: updateData },
       },
     });
@@ -150,9 +152,10 @@ export async function PATCH(
 
 export async function DELETE(
   request: Request,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const session = await getServerSession(authOptions);
     
     if (!session?.user?.email) {
@@ -175,7 +178,7 @@ export async function DELETE(
     }
 
     // Prevent self-deletion
-    if (params.id === currentUser.id) {
+    if (id === currentUser.id) {
       return NextResponse.json(
         { error: "Cannot delete your own account" },
         { status: 400 }
@@ -185,31 +188,31 @@ export async function DELETE(
     // Delete user and all related data
     await prisma.$transaction([
       prisma.searchResult.deleteMany({
-        where: { search: { userId: params.id } },
+        where: { search: { userId: id } },
       }),
       prisma.search.deleteMany({
-        where: { userId: params.id },
+        where: { userId: id },
       }),
       prisma.savedItem.deleteMany({
-        where: { userId: params.id },
+        where: { userId: id },
       }),
       prisma.subscription.deleteMany({
-        where: { userId: params.id },
+        where: { userId: id },
       }),
       prisma.rateLimit.deleteMany({
-        where: { identifier: params.id },
+        where: { identifier: id },
       }),
       prisma.auditLog.deleteMany({
-        where: { adminId: params.id },
+        where: { adminId: id },
       }),
       prisma.account.deleteMany({
-        where: { userId: params.id },
+        where: { userId: id },
       }),
       prisma.session.deleteMany({
-        where: { userId: params.id },
+        where: { userId: id },
       }),
       prisma.user.delete({
-        where: { id: params.id },
+        where: { id },
       }),
     ]);
 
@@ -219,7 +222,7 @@ export async function DELETE(
         adminId: currentUser.id,
         action: "USER_DELETED",
         targetType: "user",
-        targetId: params.id,
+        targetId: id,
         details: {},
       },
     });
