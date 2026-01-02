@@ -18,7 +18,7 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, tier: true },
+      select: { id: true, tier: true, isAdmin: true },
     });
 
     if (!user) {
@@ -65,14 +65,16 @@ export async function GET() {
       }),
     ]);
 
-    const rateLimitResult = await searchRateLimiter.check(user.id);
+    // Calculate remaining searches based on actual usage
     const tierLimits = getTierLimits(user.tier);
+    const dailyLimit = user.isAdmin ? 999999 : tierLimits.searches;
+    const remainingSearches = user.isAdmin ? 999999 : Math.max(0, dailyLimit - searchesToday);
 
     return NextResponse.json({
       totalSearches,
       searchesToday,
-      remainingSearches: rateLimitResult.remaining,
-      dailyLimit: tierLimits.searches,
+      remainingSearches,
+      dailyLimit,
       tier: user.tier,
       savedItems,
       recentSearches: recentSearches.map((s) => ({

@@ -35,6 +35,9 @@ export async function fetchTranscript(videoId: string): Promise<TranscriptSegmen
     if (transcript.length > 0) {
       console.log('Transcript segment count:', transcript.length);
       console.log('First segment structure:', JSON.stringify(transcript[0]));
+      console.log('First segment text:', transcript[0].text);
+    } else {
+      console.log('Transcript is empty');
     }
     
     return transcript.map((segment: any) => {
@@ -85,12 +88,15 @@ export function searchTranscript(
   const matches: TranscriptMatch[] = [];
   const normalizedKeywords = keywords.map(k => k.toLowerCase().trim());
   
+  console.log(`Searching ${segments.length} segments for keywords:`, normalizedKeywords);
+
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
     const text = segment.text.toLowerCase();
     
     for (const keyword of normalizedKeywords) {
       if (text.includes(keyword)) {
+        console.log(`Match found for '${keyword}' in segment:`, text);
         // Get context
         const contextBeforeSegments: string[] = [];
         const contextAfterSegments: string[] = [];

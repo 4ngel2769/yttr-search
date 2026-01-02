@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth/next";
 import { authOptions } from "@/lib/auth";
 import { searchSchema } from "@/lib/validations";
-import { performSearch } from "@/lib/search";
+import { performSearch, getTierLimits } from "@/lib/search";
 import { searchRateLimiter } from "@/lib/redis";
 import { prisma } from "@/lib/prisma";
 
@@ -19,7 +19,7 @@ export async function POST(request: Request) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, tier: true },
+      select: { id: true, tier: true, isAdmin: true },
     });
 
     if (!user) {
@@ -29,17 +29,20 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check rate limit
-    const rateLimitResult = await searchRateLimiter.check(user.id);
-    if (!rateLimitResult.allowed) {
-      return NextResponse.json(
-        { 
-          error: "Rate limit exceeded",
-          remaining: 0,
-          message: `You have reached your daily search limit. Upgrade your plan for more searches.`
-        },
-        { status: 429 }
-      );
+    // Check rate limit (skip for admins)
+    let rateLimitResult = { allowed: true, remaining: 999999, resetAt: new Date() };
+    if (!user.isAdmin) {
+      rateLimitResult = await searchRateLimiter.check(user.id);
+      if (!rateLimitResult.allowed) {
+        return NextResponse.json(
+          { 
+            error: "Rate limit exceeded",
+            remaining: 0,
+            message: `You have reached your daily search limit. Upgrade your plan for more searches.`
+          },
+          { status: 429 }
+        );
+      }
     }
 
     const body = await request.json();
@@ -108,7 +111,7 @@ export async function GET(request: Request) {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { id: true, tier: true },
+      select: { id: true, tier: true, isAdmin: true },
     });
 
     if (!user) {
@@ -118,8 +121,22 @@ export async function GET(request: Request) {
       );
     }
 
-    // Get remaining searches
-    const rateLimitResult = await searchRateLimiter.check(user.id);
+    // Calculate remaining searches from database
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    
+    const searchesToday = await prisma.search.count({
+      where: {
+        userId: user.id,
+        createdAt: { gte: today, lt: tomorrow },
+      },
+    });
+    
+    const tierLimits = getTierLimits(user.tier);
+    const dailyLimit = user.isAdmin ? 999999 : tierLimits.searches;
+    const remaining = user.isAdmin ? 999999 : Math.max(0, dailyLimit - searchesToday);
 
     // Get recent searches
     const recentSearches = await prisma.search.findMany({
@@ -137,7 +154,7 @@ export async function GET(request: Request) {
     });
 
     return NextResponse.json({
-      remaining: rateLimitResult.remaining,
+      remaining,
       tier: user.tier,
       recentSearches: recentSearches.map((s) => ({
         id: s.id,
