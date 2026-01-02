@@ -15,8 +15,8 @@ FROM base AS deps
 WORKDIR /app
 
 # Copy package files
-COPY package.json package-lock.json* ./
-COPY prisma ./prisma/
+COPY web/package.json web/package-lock.json* ./
+COPY web/prisma ./prisma/
 
 # Install dependencies
 RUN npm ci
@@ -29,7 +29,7 @@ WORKDIR /app
 
 # Copy dependencies from deps stage
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+COPY web/. .
 
 # Generate Prisma client
 RUN npx prisma generate
