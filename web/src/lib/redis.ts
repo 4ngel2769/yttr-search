@@ -2,7 +2,10 @@ import Redis from 'ioredis';
 
 const globalForRedis = globalThis as unknown as {
   redis: Redis | undefined;
+  redisConnected: boolean;
 };
+
+let isRedisConnected = false;
 
 function getRedisClient() {
   if (!process.env.REDIS_URL) {
@@ -10,13 +13,53 @@ function getRedisClient() {
     return null;
   }
   
-  return new Redis(process.env.REDIS_URL, {
-    maxRetriesPerRequest: 3,
-    lazyConnect: true,
-  });
+  try {
+    const client = new Redis(process.env.REDIS_URL, {
+      maxRetriesPerRequest: 3,
+      enableOfflineQueue: false,
+      retryStrategy(times) {
+        if (times > 3) {
+          console.warn('Redis connection failed after 3 attempts, using in-memory fallback');
+          return null;
+        }
+        return Math.min(times * 100, 3000);
+      },
+    });
+    
+    client.on('connect', () => {
+      isRedisConnected = true;
+      console.log('✓ Redis connected successfully');
+    });
+
+    client.on('error', (err) => {
+      isRedisConnected = false;
+      // Suppress noisy error logs - just warn once
+      if (!globalForRedis.redisConnected) {
+        console.warn('Redis unavailable, using in-memory rate limiting');
+        globalForRedis.redisConnected = true; // Flag to prevent repeated warnings
+      }
+    });
+
+    client.on('close', () => {
+      isRedisConnected = false;
+    });
+    
+    // Attempt connection in background
+    client.connect().catch(() => {
+      isRedisConnected = false;
+    });
+    
+    return client;
+  } catch (error) {
+    console.warn('Failed to create Redis client, using in-memory fallback');
+    return null;
+  }
 }
 
 export const redis = globalForRedis.redis ?? getRedisClient();
+export function isRedisAvailable(): boolean {
+  return isRedisConnected && redis !== null;
+}
 
 if (process.env.NODE_ENV !== 'production' && redis) {
   globalForRedis.redis = redis;
@@ -45,7 +88,8 @@ export class RateLimiter {
     const now = Date.now();
     const windowStart = now - this.windowMs;
 
-    if (redis) {
+    // Only use Redis if it's actually connected
+    if (isRedisAvailable()) {
       return this.checkWithRedis(identifier, now, windowStart);
     }
     return this.checkInMemory(identifier, now, windowStart);
@@ -88,9 +132,8 @@ export class RateLimiter {
         resetAt: new Date(now + this.windowMs),
       };
     } catch (error) {
-      console.error('Redis rate limit error:', error);
-      // Fail open - allow request if Redis fails
-      return { allowed: true, remaining: this.maxRequests, resetAt: new Date(now + this.windowMs) };
+      // If Redis fails, fall back to in-memory for this request
+      return this.checkInMemory(identifier, now, windowStart);
     }
   }
 

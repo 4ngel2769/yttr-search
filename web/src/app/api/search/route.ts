@@ -61,10 +61,26 @@ export async function POST(request: Request) {
       maxVideos: searchParams.maxVideos ? parseInt(searchParams.maxVideos) : undefined,
     });
 
+    // Transform results to flatten matches for the frontend
+    // Backend returns: { videoId, videoTitle, videoUrl, matches: [{ keyword, timestamp, text, ... }] }
+    // Frontend expects: [{ id, videoId, videoTitle, timestamp, text, matchedKeywords, videoUrl }]
+    const flattenedResults = result.results.flatMap((videoResult) => 
+      videoResult.matches.map((match, matchIndex) => ({
+        id: `${videoResult.videoId}-${matchIndex}`,
+        videoId: videoResult.videoId,
+        videoTitle: videoResult.videoTitle,
+        channelTitle: '', // Not available from current data
+        timestamp: match.timestamp,
+        text: `${match.contextBefore} ${match.text} ${match.contextAfter}`.trim(),
+        matchedKeywords: [match.keyword],
+        videoUrl: `https://www.youtube.com/watch?v=${videoResult.videoId}&t=${Math.floor(match.timestamp)}s`,
+      }))
+    );
+
     return NextResponse.json({
       success: true,
       searchId: result.searchId,
-      results: result.results,
+      results: flattenedResults,
       totalVideosProcessed: result.videosScanned,
       totalMatches: result.totalMatches,
       remaining: rateLimitResult.remaining,

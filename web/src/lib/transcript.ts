@@ -31,12 +31,39 @@ export async function fetchTranscript(videoId: string): Promise<TranscriptSegmen
   try {
     const transcript = await YoutubeTranscript.fetchTranscript(videoId);
     
-    return transcript.map((segment: any) => ({
-      text: segment.text || '',
-      start: segment.offset / 1000 || segment.start || 0,
-      duration: segment.duration / 1000 || segment.dur || 0,
-    }));
+    // Debug: log first segment to understand the structure
+    if (transcript.length > 0) {
+      console.log('Transcript segment count:', transcript.length);
+      console.log('First segment structure:', JSON.stringify(transcript[0]));
+    }
+    
+    return transcript.map((segment: any) => {
+      // Handle different property names from different versions of youtube-transcript
+      // v1.x uses: { text, offset (ms), duration (ms) }
+      // Some versions use: { text, start (sec), dur (sec) }
+      let startTime = 0;
+      if (typeof segment.offset === 'number') {
+        startTime = segment.offset / 1000; // offset is in milliseconds
+      } else if (typeof segment.start === 'number') {
+        startTime = segment.start; // start is already in seconds
+      }
+      
+      let durationTime = 0;
+      if (typeof segment.duration === 'number') {
+        // If duration > 100, assume it's milliseconds
+        durationTime = segment.duration > 100 ? segment.duration / 1000 : segment.duration;
+      } else if (typeof segment.dur === 'number') {
+        durationTime = segment.dur;
+      }
+      
+      return {
+        text: segment.text || '',
+        start: startTime,
+        duration: durationTime,
+      };
+    });
   } catch (error: any) {
+    console.error('Transcript fetch error for video', videoId, ':', error);
     if (error.message?.includes('Transcript is disabled')) {
       throw new Error('Transcripts are disabled for this video');
     }
