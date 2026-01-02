@@ -149,25 +149,77 @@ export default function HistoryPage() {
           {/* Search/Filter */}
           <Card className="mb-6">
             <CardContent className="pt-6">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                    <Input
-                      placeholder="Search by keywords..."
-                      value={searchQuery}
-                      onChange={(e) => {
-                        setSearchQuery(e.target.value);
-                        setPage(1);
-                      }}
-                      className="pl-10"
-                    />
+              <div className="flex flex-col gap-4">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="flex-1">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                      <Input
+                        placeholder="Search by keywords or target..."
+                        value={searchQuery}
+                        onChange={(e) => {
+                          setSearchQuery(e.target.value);
+                          setPage(1);
+                        }}
+                        className="pl-10"
+                      />
+                    </div>
                   </div>
                 </div>
-                <Button variant="outline">
-                  <Filter className="h-4 w-4 mr-2" />
-                  Filter
-                </Button>
+                <div className="flex flex-wrap items-center gap-3">
+                  <div className="flex items-center gap-2">
+                    <Filter className="h-4 w-4 text-muted-foreground" />
+                    <Select
+                      value={sourceType}
+                      onValueChange={(value) => {
+                        setSourceType(value);
+                        setPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Types</SelectItem>
+                        <SelectItem value="VIDEO">Video</SelectItem>
+                        <SelectItem value="CHANNEL">Channel</SelectItem>
+                        <SelectItem value="PLAYLIST">Playlist</SelectItem>
+                        <SelectItem value="BATCH">Batch</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <ArrowUpDown className="h-4 w-4 text-muted-foreground" />
+                    <Select
+                      value={sortBy}
+                      onValueChange={(value) => {
+                        setSortBy(value);
+                        setPage(1);
+                      }}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue placeholder="Sort by" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="createdAt">Date</SelectItem>
+                        <SelectItem value="matchCount">Matches</SelectItem>
+                        <SelectItem value="videosProcessed">Videos</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                    title={sortOrder === "asc" ? "Ascending" : "Descending"}
+                  >
+                    {sortOrder === "asc" ? (
+                      <ArrowUp className="h-4 w-4" />
+                    ) : (
+                      <ArrowDown className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -190,30 +242,63 @@ export default function HistoryPage() {
                   {history.searches.map((search) => (
                     <div
                       key={search.id}
-                      className="flex items-start justify-between p-4 rounded-lg border hover:bg-muted/50 transition-colors"
+                      className="flex items-start gap-4 p-4 rounded-lg border hover:bg-muted/50 transition-colors"
                     >
+                      {/* Video Thumbnails */}
+                      <div className="flex -space-x-2 shrink-0">
+                        {search.videos && search.videos.slice(0, 3).map((video, idx) => (
+                          <div 
+                            key={video.videoId} 
+                            className="relative w-16 h-12 rounded border-2 border-background overflow-hidden shadow-sm"
+                            style={{ zIndex: 3 - idx }}
+                            title={video.videoTitle}
+                          >
+                            <Image
+                              src={video.thumbnailUrl}
+                              alt={video.videoTitle}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                        ))}
+                        {search.videos && search.videos.length > 3 && (
+                          <div 
+                            className="relative w-16 h-12 rounded border-2 border-background overflow-hidden bg-muted flex items-center justify-center text-xs font-medium"
+                            style={{ zIndex: 0 }}
+                          >
+                            +{search.videos.length - 3}
+                          </div>
+                        )}
+                        {(!search.videos || search.videos.length === 0) && (
+                          <div className="w-16 h-12 rounded bg-muted flex items-center justify-center">
+                            <Search className="h-5 w-5 text-muted-foreground" />
+                          </div>
+                        )}
+                      </div>
+                      
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-2">
+                        <div className="flex items-center gap-2 mb-1">
                           <p className="font-medium truncate">
                             {search.keywords.join(", ")}
                           </p>
                           <Badge
                             variant={search.status === "COMPLETED" ? "default" : 
                                     search.status === "FAILED" ? "destructive" : "secondary"}
-                            className="text-xs"
+                            className="text-xs shrink-0"
                           >
                             {search.status.toLowerCase()}
                           </Badge>
                         </div>
+                        {search.videos && search.videos.length > 0 && (
+                          <p className="text-sm text-muted-foreground truncate mb-2">
+                            {search.videos[0].videoTitle}
+                            {search.videos.length > 1 && ` and ${search.videos.length - 1} more`}
+                          </p>
+                        )}
                         <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {search.sourceType}
-                            </Badge>
-                          </span>
-                          <span className="truncate max-w-xs" title={search.sourceValue}>
-                            {search.sourceValue}
-                          </span>
+                          <Badge variant="outline" className="text-xs capitalize">
+                            {search.sourceType.toLowerCase()}
+                          </Badge>
                           <span className="flex items-center gap-1">
                             <Search className="h-3 w-3" />
                             {search.matchCount} matches
@@ -224,7 +309,7 @@ export default function HistoryPage() {
                           </span>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 ml-4">
+                      <div className="flex items-center gap-2 ml-4 shrink-0">
                         <Button asChild size="sm" variant="outline">
                           <Link href={`/dashboard/history/${search.id}`}>
                             <ExternalLink className="h-4 w-4 mr-1" />
