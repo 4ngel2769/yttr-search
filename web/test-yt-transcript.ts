@@ -8,9 +8,10 @@ async function main() {
   try {
     console.log('Module keys:', Object.keys(scraperModule));
     // @ts-ignore
-    console.log('Module default keys:', Object.keys(scraperModule.default));
+    console.log('Module default type:', typeof scraperModule.default);
+    
     // @ts-ignore
-    const getSubtitles = scraperModule.getSubtitles || scraperModule.default?.getSubtitles;
+    const getSubtitles = typeof scraperModule.default === 'function' ? scraperModule.default : scraperModule.getSubtitles || scraperModule.default?.getSubtitles;
     
     if (getSubtitles) {
         const transcript = await getSubtitles({ videoID: videoId, lang: 'en' });
