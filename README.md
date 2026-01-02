@@ -196,7 +196,7 @@ Keywords not found:
 
 ## License
 
-MIT © 2025 angeldev0. See [LICENSE](LICENSE) for details.
+MIT © 2026 angeldev0. See [LICENSE](LICENSE) for details.
 
 ---
 
