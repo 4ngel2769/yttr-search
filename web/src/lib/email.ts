@@ -14,7 +14,7 @@ const transporter = nodemailer.createTransport({
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 const appName = process.env.NEXT_PUBLIC_APP_NAME || 'YTTR Search';
-const fromEmail = process.env.EMAIL_FROM || 'noreply@yttr-search.com';
+const fromEmail = process.env.EMAIL_FROM || 'contact-yttr@angellabs.xyz';
 
 /**
  * Generate a secure random token
@@ -150,13 +150,13 @@ export async function sendWelcomeEmail(email: string, name: string): Promise<voi
             </a>
             <hr style="border: none; border-top: 1px solid #e4e4e7; margin: 32px 0;">
             <p style="color: #a1a1aa; font-size: 12px;">
-              Need help? Contact us at support@yttr-search.com
+              Need help? Contact us at contact-yttr@angellabs.xyz
             </p>
           </div>
         </body>
       </html>
     `,
-    text: `Welcome, ${name}!\n\nYour email has been verified and your account is now active.\n\nStart searching: ${appUrl}/search\n\nNeed help? Contact us at support@yttr-search.com`,
+    text: `Welcome, ${name}!\n\nYour email has been verified and your account is now active.\n\nStart searching: ${appUrl}/search\n\nNeed help? Contact us at contact-yttr@angellabs.xyz`,
   });
 }
 
