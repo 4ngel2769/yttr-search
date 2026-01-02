@@ -158,7 +158,7 @@ export default function PrivacyPage() {
                     If you have questions about this privacy policy or our data practices, please contact us at:
                   </p>
                   <p className="mt-4">
-                    Email: privacy@yttr-search.com
+                    Email: contact-yttr@angellabs.xyz
                   </p>
                 </CardContent>
               </Card>

@@ -209,7 +209,7 @@ export default function TermsPage() {
                     For questions about these terms, please contact us at:
                   </p>
                   <p className="mt-4">
-                    Email: support@yttr-search.com
+                    Email: contact-yttr@angellabs.xyz
                   </p>
                 </CardContent>
               </Card>

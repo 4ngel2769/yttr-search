@@ -124,7 +124,7 @@ SMTP_HOST="smtp.example.com"
 SMTP_PORT="587"
 SMTP_USER="your-smtp-user"
 SMTP_PASSWORD="your-smtp-password"
-EMAIL_FROM="noreply@yourdomain.com"
+EMAIL_FROM="contact-yttr@angellabs.xyz"
 
 # App URL
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
@@ -280,6 +280,6 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 
 ## Support
 
-- 📧 Email: support@yttr-search.com
+- 📧 Email: contact-yttr@angellabs.xyz
 - 💬 Discord: [Join our community](https://discord.gg/yttr-search)
 - 📖 Documentation: [docs.yttr-search.com](https://docs.yttr-search.com)
