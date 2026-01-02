@@ -24,6 +24,7 @@ import {
   Zap
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 
 type DashboardStats = {
   totalSearches: number;
@@ -36,8 +37,14 @@ type DashboardStats = {
     id: string;
     keywords: string[];
     sourceType: string;
+    sourceValue: string;
     matchCount: number;
     createdAt: string;
+    videos: {
+      videoId: string;
+      videoTitle: string;
+      thumbnailUrl: string;
+    }[];
   }[];
 };
 
@@ -261,16 +268,45 @@ export default function DashboardPage() {
                     {stats.recentSearches.map((search) => (
                       <div
                         key={search.id}
-                        className="flex items-center justify-between p-3 rounded-lg border"
+                        className="flex items-start gap-4 p-3 rounded-lg border hover:bg-muted/50 transition-colors"
                       >
+                        {/* Video Thumbnails */}
+                        <div className="flex -space-x-2 shrink-0">
+                          {search.videos && search.videos.slice(0, 3).map((video, idx) => (
+                            <div 
+                              key={video.videoId} 
+                              className="relative w-12 h-9 rounded border-2 border-background overflow-hidden"
+                              style={{ zIndex: 3 - idx }}
+                            >
+                              <Image
+                                src={video.thumbnailUrl}
+                                alt={video.videoTitle}
+                                fill
+                                className="object-cover"
+                              />
+                            </div>
+                          ))}
+                          {(!search.videos || search.videos.length === 0) && (
+                            <div className="w-12 h-9 rounded bg-muted flex items-center justify-center">
+                              <Search className="h-4 w-4 text-muted-foreground" />
+                            </div>
+                          )}
+                        </div>
+                        
                         <div className="flex-1 min-w-0">
                           <p className="font-medium truncate">
                             {search.keywords.slice(0, 3).join(", ")}
                             {search.keywords.length > 3 && ` +${search.keywords.length - 3}`}
                           </p>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          {search.videos && search.videos.length > 0 && (
+                            <p className="text-xs text-muted-foreground truncate mb-1">
+                              {search.videos[0].videoTitle}
+                              {search.videos.length > 1 && ` +${search.videos.length - 1} more`}
+                            </p>
+                          )}
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
                             <Badge variant="outline" className="text-xs capitalize">
-                              {search.sourceType}
+                              {search.sourceType.toLowerCase()}
                             </Badge>
                             <span>{search.matchCount} matches</span>
                             <span>•</span>

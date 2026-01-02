@@ -30,40 +30,79 @@ export async function GET(request: Request) {
     const page = parseInt(searchParams.get("page") || "1");
     const limit = parseInt(searchParams.get("limit") || "10");
     const query = searchParams.get("q") || "";
+    const sourceType = searchParams.get("sourceType") || "";
+    const sortBy = searchParams.get("sortBy") || "date";
+    const sortOrder = searchParams.get("sortOrder") || "desc";
 
     const skip = (page - 1) * limit;
 
-    const where = {
-      userId: user.id,
-      ...(query && {
-        keywords: {
-          hasSome: query.split(" ").map((k) => k.toLowerCase()),
-        },
-      }),
-    };
+    // Build where clause
+    const where: any = { userId: user.id };
+    
+    // Filter by search query (fuzzy match on keywords)
+    if (query) {
+      where.OR = [
+        { keywords: { hasSome: query.toLowerCase().split(" ") } },
+        { target: { contains: query, mode: "insensitive" } },
+      ];
+    }
+    
+    // Filter by source type
+    if (sourceType && ["CHANNEL", "VIDEO", "BATCH", "PLAYLIST"].includes(sourceType.toUpperCase())) {
+      where.searchMode = sourceType.toUpperCase();
+    }
+
+    // Build orderBy clause
+    let orderBy: any = { createdAt: "desc" };
+    if (sortBy === "matches") {
+      orderBy = { resultsCount: sortOrder };
+    } else if (sortBy === "date") {
+      orderBy = { createdAt: sortOrder };
+    }
 
     const [searches, total] = await Promise.all([
       prisma.search.findMany({
         where,
-        orderBy: { createdAt: "desc" },
+        orderBy,
         skip,
         take: limit,
         select: {
           id: true,
           keywords: true,
-          sourceType: true,
-          sourceValue: true,
-          matchCount: true,
-          videosProcessed: true,
-          status: true,
+          searchMode: true,
+          target: true,
+          resultsCount: true,
+          videosScanned: true,
           createdAt: true,
+          results: {
+            take: 4,
+            select: {
+              videoId: true,
+              videoTitle: true,
+              thumbnailUrl: true,
+            },
+          },
         },
       }),
       prisma.search.count({ where }),
     ]);
 
     return NextResponse.json({
-      searches,
+      searches: searches.map((s) => ({
+        id: s.id,
+        keywords: s.keywords,
+        sourceType: s.searchMode,
+        sourceValue: s.target,
+        matchCount: s.resultsCount,
+        videosProcessed: s.videosScanned,
+        status: "COMPLETED",
+        createdAt: s.createdAt,
+        videos: s.results.map((r) => ({
+          videoId: r.videoId,
+          videoTitle: r.videoTitle,
+          thumbnailUrl: r.thumbnailUrl || `https://i.ytimg.com/vi/${r.videoId}/default.jpg`,
+        })),
+      })),
       total,
       page,
       totalPages: Math.ceil(total / limit),
