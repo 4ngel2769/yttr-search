@@ -11,16 +11,29 @@ async function main() {
     console.log('Module default type:', typeof scraperModule.default);
     
     // @ts-ignore
-    const getSubtitles = typeof scraperModule.default === 'function' ? scraperModule.default : scraperModule.getSubtitles || scraperModule.default?.getSubtitles;
-    
-    if (getSubtitles) {
-        const transcript = await getSubtitles({ videoID: videoId, lang: 'en' });
-        console.log('Transcript length:', transcript.length);
-        if (transcript.length > 0) {
-            console.log('First item:', transcript[0]);
-        }
+    const ScraperClass = scraperModule.default;
+    // @ts-ignore
+    const getSubtitles = ScraperClass.getSubtitles;
+
+    if (typeof getSubtitles === 'function') {
+         const transcript = await getSubtitles({ videoID: videoId, lang: 'en' });
+         console.log('Transcript length:', transcript.length);
+         if (transcript.length > 0) {
+             console.log('First item:', transcript[0]);
+         }
     } else {
-        console.log('getSubtitles not found');
+        console.log('getSubtitles is not a static method. Trying instantiation.');
+        try {
+            const scraper = new ScraperClass();
+            // @ts-ignore
+            const transcript = await scraper.getSubtitles({ videoID: videoId, lang: 'en' });
+             console.log('Transcript length:', transcript.length);
+             if (transcript.length > 0) {
+                 console.log('First item:', transcript[0]);
+             }
+        } catch (e) {
+            console.error('Instantiation failed:', e);
+        }
     }
 
   } catch (e) {
