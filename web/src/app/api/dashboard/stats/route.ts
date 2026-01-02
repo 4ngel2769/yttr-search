@@ -61,6 +61,15 @@ export async function GET() {
           searchMode: true,
           resultsCount: true,
           createdAt: true,
+          target: true,
+          results: {
+            take: 3,
+            select: {
+              videoId: true,
+              videoTitle: true,
+              thumbnailUrl: true,
+            },
+          },
         },
       }),
     ]);
@@ -81,8 +90,14 @@ export async function GET() {
         id: s.id,
         keywords: s.keywords,
         sourceType: s.searchMode,
+        sourceValue: s.target,
         matchCount: s.resultsCount,
         createdAt: s.createdAt,
+        videos: s.results.map((r) => ({
+          videoId: r.videoId,
+          videoTitle: r.videoTitle,
+          thumbnailUrl: r.thumbnailUrl || `https://i.ytimg.com/vi/${r.videoId}/default.jpg`,
+        })),
       })),
     });
 
