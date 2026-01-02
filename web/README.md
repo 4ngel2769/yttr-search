@@ -124,7 +124,7 @@ SMTP_HOST="smtp.example.com"
 SMTP_PORT="587"
 SMTP_USER="your-smtp-user"
 SMTP_PASSWORD="your-smtp-password"
-EMAIL_FROM="contact-yttr@angellabs.xyz"
+EMAIL_FROM="noreply-yttr@angellabs.xyz"
 
 # App URL
 NEXT_PUBLIC_APP_URL="http://localhost:3000"
