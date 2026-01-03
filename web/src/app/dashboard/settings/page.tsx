@@ -335,6 +335,8 @@ export default function SettingsPage() {
             {/* Security Tab */}
             <TabsContent value="security">
               <div className="space-y-6">
+                <TwoFactorSetup twoFactorEnabled={profile?.twoFactorEnabled || false} />
+
                 <Card>
                   <CardHeader>
                     <CardTitle>Password</CardTitle>
