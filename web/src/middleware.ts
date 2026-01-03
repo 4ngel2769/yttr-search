@@ -23,6 +23,7 @@ export async function middleware(request: NextRequest) {
     "/api/auth",
     "/api/stripe/webhook",
     "/api/search",
+    "/api/health",
   ];
 
   // Check if the route is public
