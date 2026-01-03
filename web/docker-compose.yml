@@ -1,8 +1,6 @@
-version: '3.8'
-
 services:
   # ============================================
-  # YTTR Search Web Application
+  # YTTR Search Web App
   # ============================================
   app:
     build:
