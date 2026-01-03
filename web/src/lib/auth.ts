@@ -24,6 +24,7 @@ export const authOptions: NextAuthOptions = {
       credentials: {
         email: { label: 'Email', type: 'email' },
         password: { label: 'Password', type: 'password' },
+        twoFactorCode: { label: '2FA Code', type: 'text' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -32,6 +33,18 @@ export const authOptions: NextAuthOptions = {
 
         const user = await prisma.user.findUnique({
           where: { email: credentials.email.toLowerCase() },
+          select: {
+            id: true,
+            email: true,
+            name: true,
+            image: true,
+            passwordHash: true,
+            emailVerified: true,
+            isSuspended: true,
+            twoFactorEnabled: true,
+            twoFactorSecret: true,
+            backupCodes: true,
+          },
         });
 
         if (!user || !user.passwordHash) {
@@ -55,6 +68,40 @@ export const authOptions: NextAuthOptions = {
 
         if (!isPasswordValid) {
           throw new Error('Invalid email or password');
+        }
+
+        // Check 2FA if enabled
+        if (user.twoFactorEnabled && user.twoFactorSecret) {
+          if (!credentials.twoFactorCode) {
+            throw new Error('2FA_REQUIRED');
+          }
+
+          const { verifyTwoFactorToken, verifyBackupCode } = await import('@/lib/two-factor');
+          
+          // Try verifying as TOTP token
+          const isValidToken = verifyTwoFactorToken(credentials.twoFactorCode, user.twoFactorSecret);
+          
+          if (!isValidToken) {
+            // Try as backup code
+            if (user.backupCodes) {
+              const { success } = await verifyBackupCode(credentials.twoFactorCode, user.backupCodes);
+              
+              if (success) {
+                // Remove used backup code
+                const { removeBackupCode } = await import('@/lib/two-factor');
+                const newBackupCodes = await removeBackupCode(credentials.twoFactorCode, user.backupCodes);
+                
+                await prisma.user.update({
+                  where: { id: user.id },
+                  data: { backupCodes: newBackupCodes },
+                });
+              } else {
+                throw new Error('Invalid 2FA code or backup code');
+              }
+            } else {
+              throw new Error('Invalid 2FA code');
+            }
+          }
         }
 
         // Update last login
