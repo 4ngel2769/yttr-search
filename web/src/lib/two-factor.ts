@@ -57,17 +57,17 @@ export async function hashBackupCodes(codes: string[]): Promise<string> {
 /**
  * Verify a backup code
  */
-export async function verifyBackupCode(code: string, hashedCodes: string): Promise<boolean> {
+export async function verifyBackupCode(code: string, hashedCodes: string): Promise<{ success: boolean }> {
   try {
     const codes: string[] = JSON.parse(hashedCodes);
     for (const hashedCode of codes) {
       if (await bcrypt.compare(code, hashedCode)) {
-        return true;
+        return { success: true };
       }
     }
-    return false;
+    return { success: false };
   } catch (error) {
-    return false;
+    return { success: false };
   }
 }
 
