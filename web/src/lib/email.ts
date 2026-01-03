@@ -14,13 +14,29 @@ const transporter = nodemailer.createTransport({
 
 const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 const appName = process.env.NEXT_PUBLIC_APP_NAME || 'YTTR Search';
-const fromEmail = process.env.EMAIL_FROM || 'contact-yttr@angellabs.xyz';
+const fromEmail = process.env.EMAIL_FROM || 'noreply-yttr@angellabs.xyz';
 
 /**
  * Generate a secure random token
  */
 export function generateToken(): string {
   return crypto.randomBytes(32).toString('hex');
+}
+
+/**
+ * Generic send email function
+ */
+export async function sendEmail(options: {
+  to: string;
+  subject: string;
+  html: string;
+}): Promise<void> {
+  await transporter.sendMail({
+    from: `"${appName}" <${fromEmail}>`,
+    to: options.to,
+    subject: options.subject,
+    html: options.html,
+  });
 }
 
 /**
