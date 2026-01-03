@@ -6,8 +6,7 @@
 FROM node:20-alpine AS base
 
 # Install dependencies needed for Prisma and Python
-# openssl1.1-compat-libs provides libssl.so.1.1 that Prisma needs
-RUN apk add --no-cache libc6-compat python3 py3-pip openssl-dev openssl1.1-compat-libs
+RUN apk add --no-cache libc6-compat python3 py3-pip openssl openssl-dev
 
 # ============================================
 # Dependencies stage - install node modules
