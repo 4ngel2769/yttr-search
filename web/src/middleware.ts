@@ -55,8 +55,8 @@ export async function middleware(request: NextRequest) {
 
   // Admin routes protection
   if (pathname.startsWith("/admin") || pathname.startsWith("/api/admin")) {
-    // Token should have user role from JWT callback
-    if (token.role !== "ADMIN") {
+    // Token should have isAdmin from JWT callback
+    if (!token.isAdmin) {
       return NextResponse.redirect(new URL("/dashboard", request.url));
     }
   }

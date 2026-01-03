@@ -343,7 +343,7 @@ export default function SettingsPage() {
                   <CardContent>
                     {profile?.hasPassword ? (
                       <Button asChild variant="outline">
-                        <Link href="/auth/change-password">
+                        <Link href="/auth/reset-password">
                           Change Password
                         </Link>
                       </Button>
