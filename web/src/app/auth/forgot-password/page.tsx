@@ -12,10 +12,14 @@ import { useToast } from "@/hooks/use-toast";
 import { forgotPasswordSchema, type ForgotPasswordInput } from "@/lib/validations";
 import { Search, Loader2, ArrowLeft, CheckCircle } from "lucide-react";
 
+// Check if email verification is enabled
+const isEmailVerificationEnabled = process.env.NEXT_PUBLIC_REQUIRE_EMAIL_VERIFICATION !== 'false';
+
 export default function ForgotPasswordPage() {
   const { toast } = useToast();
   const [isLoading, setIsLoading] = useState(false);
   const [isSuccess, setIsSuccess] = useState(false);
+  const [resetMethod, setResetMethod] = useState<'password' | 'magic-link'>('password');
 
   const form = useForm<ForgotPasswordInput>({
     resolver: zodResolver(forgotPasswordSchema),
@@ -27,7 +31,11 @@ export default function ForgotPasswordPage() {
   async function onSubmit(data: ForgotPasswordInput) {
     setIsLoading(true);
     try {
-      const response = await fetch("/api/auth/forgot-password", {
+      const endpoint = resetMethod === 'magic-link' 
+        ? '/api/auth/magic-link'
+        : '/api/auth/forgot-password';
+
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -39,7 +47,7 @@ export default function ForgotPasswordPage() {
         toast({
           variant: "destructive",
           title: "Error",
-          description: result.error,
+          description: result.error || "Failed to send reset link",
         });
       } else {
         setIsSuccess(true);
@@ -65,7 +73,10 @@ export default function ForgotPasswordPage() {
             </div>
             <CardTitle>Check your email</CardTitle>
             <CardDescription>
-              If an account exists with that email, we&apos;ve sent a password reset link.
+              {resetMethod === 'magic-link'
+                ? "We've sent you a magic link to sign in."
+                : "If an account exists with that email, we've sent a password reset link."
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -96,11 +107,37 @@ export default function ForgotPasswordPage() {
           </Link>
           <CardTitle>Forgot your password?</CardTitle>
           <CardDescription>
-            Enter your email address and we&apos;ll send you a link to reset your password.
+            {resetMethod === 'magic-link'
+              ? "We'll send you a secure link to sign in without a password."
+              : "Enter your email address and we'll send you a link to reset your password."
+            }
           </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+            {isEmailVerificationEnabled && (
+              <div className="flex gap-2 p-1 bg-muted rounded-lg mb-4">
+                <Button
+                  type="button"
+                  variant={resetMethod === 'password' ? 'default' : 'ghost'}
+                  className="flex-1"
+                  onClick={() => setResetMethod('password')}
+                  size="sm"
+                >
+                  Reset Password
+                </Button>
+                <Button
+                  type="button"
+                  variant={resetMethod === 'magic-link' ? 'default' : 'ghost'}
+                  className="flex-1"
+                  onClick={() => setResetMethod('magic-link')}
+                  size="sm"
+                >
+                  🔗 Magic Link
+                </Button>
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -122,8 +159,14 @@ export default function ForgotPasswordPage() {
               {isLoading ? (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               ) : null}
-              Send Reset Link
+              {resetMethod === 'magic-link' ? 'Send Magic Link' : 'Send Reset Link'}
             </Button>
+
+            {resetMethod === 'magic-link' && (
+              <p className="text-xs text-center text-muted-foreground">
+                The magic link will work only once and expires in 15 minutes
+              </p>
+            )}
           </form>
         </CardContent>
         <CardFooter>

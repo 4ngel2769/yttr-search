@@ -17,6 +17,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
+import TwoFactorSetup from "@/components/TwoFactorSetup";
 import { 
   Loader2,
   User,
@@ -44,6 +45,7 @@ type UserProfile = {
   createdAt: string;
   emailVerified: boolean;
   hasPassword: boolean;
+  twoFactorEnabled?: boolean;
   subscription: {
     status: string;
     currentPeriodEnd: string;
