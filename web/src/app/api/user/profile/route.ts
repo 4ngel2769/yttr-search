@@ -24,6 +24,7 @@ export async function GET() {
         createdAt: true,
         emailVerified: true,
         passwordHash: true,
+        twoFactorEnabled: true,
         subscription: {
           select: {
             status: true,
@@ -48,6 +49,7 @@ export async function GET() {
       createdAt: user.createdAt,
       emailVerified: !!user.emailVerified,
       hasPassword: !!user.passwordHash,
+      twoFactorEnabled: user.twoFactorEnabled,
       subscription: user.subscription,
     });
 
